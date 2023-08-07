@@ -1,0 +1,1 @@
+This is a website that will help people with mental health by teaching philosophy, and provide a good resource for learning about philosophy.
