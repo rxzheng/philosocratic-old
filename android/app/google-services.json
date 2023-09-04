@@ -1,114 +1,34 @@
 {
   "project_info": {
-    "project_number": "358601933529",
-    "firebase_url": "https://aporia-network-default-rtdb.firebaseio.com",
-    "project_id": "aporia-network",
-    "storage_bucket": "aporia-network.appspot.com"
+    "project_number": "191792249819",
+    "project_id": "philosocratic-40f10",
+    "storage_bucket": "philosocratic-40f10.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:358601933529:android:2364b061551b873b6ef4c8",
+        "mobilesdk_app_id": "1:191792249819:android:20b51b5750fc8baec745fe",
         "android_client_info": {
-          "package_name": "com.aporia.network"
+          "package_name": "com.philosocratic.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "358601933529-lo264k5chj8f6f4ga3lguqnum8no3goa.apps.googleusercontent.com",
+          "client_id": "191792249819-efeb8on624dv1sd6v699gnv25onvns5b.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyB_vO8pFvLn2fy-50DMnxsuElZigDbMev0"
+          "current_key": "AIzaSyBpFJZKAQrqViRz8I5dXFFIlPtK_N9pLn4"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "358601933529-775g3tt1n0dcngslcr2pil1327jlcd6g.apps.googleusercontent.com",
+              "client_id": "191792249819-5ck7opg9ap1evgreb7eh42h399ku0c9u.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "358601933529-ap59j3dsiu0qn76bof0hbduaipiehjul.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.aporia.network"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:358601933529:android:4d05f10eab482f016ef4c8",
-        "android_client_info": {
-          "package_name": "com.garv.mathsClub"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "358601933529-lo264k5chj8f6f4ga3lguqnum8no3goa.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyB_vO8pFvLn2fy-50DMnxsuElZigDbMev0"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "358601933529-775g3tt1n0dcngslcr2pil1327jlcd6g.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "358601933529-ap59j3dsiu0qn76bof0hbduaipiehjul.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.aporia.network"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:358601933529:android:dc89538e8443be356ef4c8",
-        "android_client_info": {
-          "package_name": "com.twocousins.app"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "358601933529-lo264k5chj8f6f4ga3lguqnum8no3goa.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyB_vO8pFvLn2fy-50DMnxsuElZigDbMev0"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "358601933529-775g3tt1n0dcngslcr2pil1327jlcd6g.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "358601933529-ap59j3dsiu0qn76bof0hbduaipiehjul.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.aporia.network"
-              }
             }
           ]
         }

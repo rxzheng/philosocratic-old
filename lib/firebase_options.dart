@@ -44,46 +44,39 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAIbyOqj7fHAIFx35HKyXTV9Nff6EQqnfc',
-    appId: '1:358601933529:web:7b516f84486483936ef4c8',
-    messagingSenderId: '358601933529',
-    projectId: 'aporia-network',
-    authDomain: 'aporia-network.firebaseapp.com',
-    databaseURL: 'https://aporia-network-default-rtdb.firebaseio.com',
-    storageBucket: 'aporia-network.appspot.com',
-    measurementId: 'G-11Q1ZD43GX',
+    apiKey: 'AIzaSyAcQ0pI-HrDisFrJFgZNj_TNFW_6WiXnyA',
+    appId: '1:191792249819:web:fc607daee329f6a5c745fe',
+    messagingSenderId: '191792249819',
+    projectId: 'philosocratic-40f10',
+    authDomain: 'philosocratic-40f10.firebaseapp.com',
+    storageBucket: 'philosocratic-40f10.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB_vO8pFvLn2fy-50DMnxsuElZigDbMev0',
-    appId: '1:358601933529:android:4d05f10eab482f016ef4c8',
-    messagingSenderId: '358601933529',
-    projectId: 'aporia-network',
-    databaseURL: 'https://aporia-network-default-rtdb.firebaseio.com',
-    storageBucket: 'aporia-network.appspot.com',
+    apiKey: 'AIzaSyBpFJZKAQrqViRz8I5dXFFIlPtK_N9pLn4',
+    appId: '1:191792249819:android:20b51b5750fc8baec745fe',
+    messagingSenderId: '191792249819',
+    projectId: 'philosocratic-40f10',
+    storageBucket: 'philosocratic-40f10.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBcxSoJeqdgzLyBBJAYc_halNbWEAuBzjo',
-    appId: '1:358601933529:ios:454b6ccde33173de6ef4c8',
-    messagingSenderId: '358601933529',
-    projectId: 'aporia-network',
-    databaseURL: 'https://aporia-network-default-rtdb.firebaseio.com',
-    storageBucket: 'aporia-network.appspot.com',
-    androidClientId: '358601933529-bsf3ecuhildi5ldasebt0c0clkdigrmu.apps.googleusercontent.com',
-    iosClientId: '358601933529-o8hcc0pgel4doov5881624dll1pdsnnc.apps.googleusercontent.com',
-    iosBundleId: 'com.garv.mathsClub',
+    apiKey: 'AIzaSyALdb54e1FGtIYMJG5Pl_syqawOKL1L9rk',
+    appId: '1:191792249819:ios:f309fe82381d25e7c745fe',
+    messagingSenderId: '191792249819',
+    projectId: 'philosocratic-40f10',
+    storageBucket: 'philosocratic-40f10.appspot.com',
+    iosClientId: '191792249819-mek86qcmtpfniq10864k5s3s0tvj4u7f.apps.googleusercontent.com',
+    iosBundleId: 'com.philosocratic.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBcxSoJeqdgzLyBBJAYc_halNbWEAuBzjo',
-    appId: '1:358601933529:ios:454b6ccde33173de6ef4c8',
-    messagingSenderId: '358601933529',
-    projectId: 'aporia-network',
-    databaseURL: 'https://aporia-network-default-rtdb.firebaseio.com',
-    storageBucket: 'aporia-network.appspot.com',
-    androidClientId: '358601933529-bsf3ecuhildi5ldasebt0c0clkdigrmu.apps.googleusercontent.com',
-    iosClientId: '358601933529-o8hcc0pgel4doov5881624dll1pdsnnc.apps.googleusercontent.com',
-    iosBundleId: 'com.garv.mathsClub',
+    apiKey: 'AIzaSyALdb54e1FGtIYMJG5Pl_syqawOKL1L9rk',
+    appId: '1:191792249819:ios:f309fe82381d25e7c745fe',
+    messagingSenderId: '191792249819',
+    projectId: 'philosocratic-40f10',
+    storageBucket: 'philosocratic-40f10.appspot.com',
+    iosClientId: '191792249819-mek86qcmtpfniq10864k5s3s0tvj4u7f.apps.googleusercontent.com',
+    iosBundleId: 'com.philosocratic.app',
   );
 }

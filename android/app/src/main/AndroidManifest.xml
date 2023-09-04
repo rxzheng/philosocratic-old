@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aporia.network">
    <application
-        android:label="Maths Club"
+        android:label="Philosocratic"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -2,18 +2,18 @@ import 'dart:convert';
 
 import 'config_parser.dart';
 
-const String name = 'Maths Club';
-const String detailedName = 'CGS Maths Club';
-const String appID = 'maths_club';
+const String name = 'Philosocratic';
+const String detailedName = 'Philosocratic App';
+const String appID = 'philosocratic_app';
 Map<String, Config> globalConfig = {
-  'aporia_app': configFromJson(jsonEncode(configString['maths_club'])),
+  'philosocratic_app': configFromJson(jsonEncode(configString['philosocratic_app'])),
   'maths_club': configFromJson(jsonEncode(configString['maths_club'])),
   'two_cousins': configFromJson(jsonEncode(configString['two_cousins'])),
 };
 Config configMap = globalConfig[appID]!;
 
 const Map configString = {
-  "aporia_app": {
+  "philosocratic_app": {
     "views": [
       {
         "name": "leaderboards",
