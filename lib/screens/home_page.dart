@@ -16,7 +16,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:maths_club/screens/section_views/section_page.dart';
-import 'package:maths_club/screens/settings_page.dart';
+import 'package:maths_club/screens/settings/settings_page.dart';
 import 'package:maths_club/utils/components.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:maths_club/widgets/forks/sleek_circular_slider/appearance.dart';
@@ -173,7 +173,7 @@ Widget userInfo(BuildContext context,
 
   // if our user is a volunteer, show different text
   if (abilities.contains('volunteering')) {
-    int volunteerHours = (profileMap?['volunteerHours'] ?? 0).toInt();
+    int volunteerHours = ((profileMap?['processedVolunteerHours'] ?? profileMap?['volunteerHours']) ?? 0).toInt();
     subText = {
       1: {
         'title': 'Time to Lesson',
@@ -543,7 +543,7 @@ class _HomePageState extends State<HomePage> {
                                         builder: (context, postsGroupSnapshot) {
                                           if (postsGroupSnapshot
                                                   .connectionState ==
-                                              ConnectionState.active) {
+                                              ConnectionState.active || postsGroupSnapshot.hasData) {
                                             // Builds section cards based on the
                                             // postGroups a user is a part of.
                                             List docs = postsGroupSnapshot.data?.docs ?? [];

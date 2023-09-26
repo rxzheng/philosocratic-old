@@ -7,6 +7,8 @@ import 'package:maths_club/screens/section_views/admin_view/manage_user_page.dar
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:maths_club/screens/home_page.dart';
 
+import '../../../utils/config/config.dart';
+
 class UserModel extends ISuspensionBean {
   String username;
   String role;
@@ -191,7 +193,7 @@ class _UsersPageState extends State<UsersPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => ManageUserPage(userInfo: model)),
+              builder: (context) => ManageUserPage(userInfo: model, canEdit: true,)),
         );
       },
     );

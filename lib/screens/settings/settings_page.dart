@@ -11,15 +11,23 @@ import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:maths_club/screens/home_page.dart';
 import 'package:maths_club/widgets/forks/editable_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:mime/mime.dart';
 import 'package:maths_club/utils/config/config.dart' as config;
 import 'package:maths_club/utils/config/abilities.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+import 'dart:io' show Platform;
+
+import '../../utils/config/config.dart';
+import '../../widgets/lesson_countdown.dart';
 
 /**
  * The following section includes functions for the settings page.
@@ -27,7 +35,7 @@ import 'package:maths_club/utils/config/abilities.dart';
 
 /// Creates card buttons within settings, that lead to a url.
 Widget settingsCard(BuildContext context,
-    {required String text, required Uri url}) {
+    {required String text, Uri? url, Function? onTap}) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
     child: Card(
@@ -40,7 +48,13 @@ Widget settingsCard(BuildContext context,
         splashColor: Theme.of(context).colorScheme.primary.withAlpha(40),
         highlightColor: Theme.of(context).colorScheme.primary.withAlpha(20),
         onTap: () {
-          launchUrl(url);
+          if (onTap == null) {
+            if (url != null) {
+              launchUrl(url);
+            }
+          } else {
+            onTap.call();
+          }
         },
         child: SizedBox(
           height: 60,
@@ -130,6 +144,124 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    Widget about = Scaffold(
+      appBar: AppBar(
+          leading: InkWell(
+              onTap: () {
+                Navigator.pop(context);
+              },
+              child: Icon(Icons.arrow_back,
+                  color:
+                  Theme.of(context).primaryColorLight)),
+          backgroundColor: Colors.transparent),
+      body: Padding(
+          padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
+          child: Center(
+            child: ListView(
+              children: [
+                const SizedBox(height: 60,),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(36),
+                    child: SizedBox(
+                      height: 300,
+                      width: 300,
+                      child: SvgPicture.asset('assets/app_icon.svg',
+                          semanticsLabel: 'app logo'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: FutureBuilder<PackageInfo>(
+                      future: PackageInfo.fromPlatform(),
+                      builder: (context, packageInfo) {
+                        if (packageInfo.connectionState == ConnectionState.done) {
+                          try {
+                            return Text(
+                                "Platform: ${Platform.operatingSystem} | App Version: ${packageInfo.data!.version} (${packageInfo.data!.buildNumber})");
+                          } catch (err) {
+                            try {
+                              if (packageInfo.data!.buildNumber == "") {
+                                return Text(
+                                    "Platform: N/A | App Version: ${packageInfo.data!.version}");
+                              }
+                              return Text(
+                                  "Platform: N/A | App Version: ${packageInfo.data!.version} (${packageInfo.data!.buildNumber})");
+                            } catch (err) {
+                              return const Text(
+                                  "Platform: N/A | App Version: N/A)");
+                            }
+                          }
+                        }
+                        return const Text("");
+                      }),
+                ),
+                const SizedBox(
+                  height: 10.0,
+                ),
+                const Padding(
+                  padding:  EdgeInsets.fromLTRB(22, 10, 22, 10),
+                  child:  Text(
+                    config.detailedName,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Padding(
+                  padding:  const EdgeInsets.fromLTRB(22, 10, 22, 20),
+                  child:  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Powered by ',
+                          style: TextStyle(
+                              color:
+                              Theme.of(context).primaryColorLight),
+                        ),
+                        TextSpan(
+                          text: 'Aporia',
+                          style: const TextStyle(color: Colors.blue),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              launchUrlString('https://github.com/garv-shah/aporia-network');
+                            },
+                        ),
+                        TextSpan(
+                          text: ', an open-source education platform created by ',
+                          style: TextStyle(
+                              color:
+                              Theme.of(context).primaryColorLight),
+                        ),
+                        TextSpan(
+                          text: 'Garv Shah',
+                          style: const TextStyle(color: Colors.blue),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              launchUrlString('https://garv-shah.github.io/');
+                            },
+                        ),
+                        TextSpan(
+                          text: '.',
+                          style: TextStyle(
+                              color:
+                              Theme.of(context).primaryColorLight),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 85,
+                  width: 85,
+                  child: SvgPicture.asset('assets/aporia_icon.svg',
+                      semanticsLabel: 'aporia logo'),
+                ),
+              ],
+            ),
+          )),
+    );
+
     String username = widget.userData['username'] ?? "...";
     late List<DocumentSnapshot> userInfoList;
 
@@ -155,10 +287,41 @@ class _SettingsPageState extends State<SettingsPage> {
               .doc(FirebaseAuth.instance.currentUser?.uid)
               .snapshots(),
           builder: (context, publicProfileSnapshot) {
-            Map<String, dynamic>? experienceMap =
+            Map<String, dynamic>? profileMap =
                 publicProfileSnapshot.data?.data() as Map<String, dynamic>?;
-            double experience = (experienceMap?['experience'] ?? 0).toDouble();
+            double experience = (profileMap?['experience'] ?? 0).toDouble();
             Map<String, dynamic> levelMap = calculateLevel(experience);
+
+            Map<int, Map<String, String>> subText = {};
+
+            // if our user is a volunteer, show different text
+            if (getComputedAbilities(widget.userRoles).contains('volunteering')) {
+              int volunteerHours = ((profileMap?['processedVolunteerHours'] ?? profileMap?['volunteerHours']) ?? 0).toInt();
+              subText = {
+                1: {
+                  'title': 'Time to Lesson',
+                  'text': profileMap?['volunteer'] == true ? 'Loading...' : 'N/A',
+                  'util': 'lessonCountdown'
+                },
+                2: {
+                  'title': 'Volunteer Hours',
+                  'text': '$volunteerHours ${volunteerHours == 1 ? 'Hour' : 'Hours'}',
+                },
+              };
+            } else {
+              subText = {
+                1: {
+                  'title': 'Level',
+                  'text': levelMap['level'].toString(),
+                },
+                2: {
+                  'title': 'Experience',
+                  'text': (experience.isInfinite)
+                      ? "Infinity"
+                      : "${experience.abs().toInt()}/${levelMap['maxVal'].toInt()}"
+                },
+              };
+            }
 
             return Center(
               child: SizedBox(
@@ -290,15 +453,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.center,
                                         children: [
-                                          Text('Level',
+                                          Text(subText[1]?['title'] ?? 'error',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleMedium),
                                           Padding(
                                             padding: const EdgeInsets.fromLTRB(
                                                 16, 0, 16, 0),
-                                            child: Text(
-                                              levelMap['level'].toString(),
+                                            child: (profileMap?['volunteer'] == true && subText[1]?['util'] == 'lessonCountdown')
+                                                ? lessonCountdown(profileMap)
+                                                : Text(
+                                              subText[1]?['text'] ?? 'error',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleLarge
@@ -323,7 +488,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.center,
                                         children: [
-                                          Text('Experience',
+                                          Text(subText[2]?['title'] ?? 'error',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleMedium),
@@ -334,9 +499,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                               // If level if infinity, render text
                                               // to say so, if not get the positive
                                               // value and show how far to next level
-                                              (experience.isInfinite)
-                                                  ? "Infinity"
-                                                  : "${experience.abs().toInt()}/${levelMap['maxVal'].toInt()}",
+                                              subText[2]?['text'] ?? 'error',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleLarge
@@ -371,7 +534,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             // tag, puts that into a list and
                                             // returns a string of that
                                               rolesSnapshot.data?.docs
-                                                      .map((doc) => doc['tag'])
+                                                      .map((doc) => configString[appID]['roles'][doc.id]['name'] ?? doc['tag'])
                                                       .toList()
                                                       .join(', ') ??
                                                   "Error: couldn't map roles",
@@ -458,12 +621,52 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     ),
+                    getComputedAbilities(widget.userRoles).contains('volunteering') ? settingsCard(context,
+                        text: "Generate Certificate",
+                        onTap: () {
+                          final snackBar = SnackBar(
+                            content: Text(
+                              "Generating a certificate, hold tight!",
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .primaryColorLight),
+                            ),
+                            backgroundColor: Theme.of(context)
+                                .scaffoldBackgroundColor,
+                          );
+                          // Find the Scaffold in the widget tree and use it to show a SnackBar.
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(snackBar);
+
+                          functions
+                              .httpsCallable('generateCertificate')
+                              .call().then((_) {
+                            final storageRef = FirebaseStorage.instance.ref();
+                            final certificateRef = storageRef.child('certificates/${FirebaseAuth.instance.currentUser?.uid}/certificate.pdf');
+                            certificateRef.getDownloadURL().then((url) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                  content: Text(
+                                    "Certificate Generated!",
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .primaryColorLight),
+                                  ),
+                                  backgroundColor: Theme.of(context)
+                                      .scaffoldBackgroundColor,
+                                )
+                              );
+
+                              // go to download url
+                              launchUrl(Uri.parse(url));
+                            });
+                          });
+                        }) : const SizedBox.shrink(),
                     settingsCard(context,
                         text: "About",
-                        url: Uri.parse("https://garv-shah.github.io")),
-                    settingsCard(context,
-                        text: "GitHub",
-                        url: Uri.parse("https://github.com/garv-shah/aporia-network")),
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => about));
+                        }),
                     // Delete Account and Logout Buttons
                     Padding(
                       padding: const EdgeInsets.all(16.0),

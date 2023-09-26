@@ -8,7 +8,7 @@ Created: Mon Jul 18 21:25:01 2022
 import 'package:flutter/material.dart';
 import 'package:maths_club/screens/home_page.dart';
 import 'package:maths_club/screens/leaderboards.dart';
-import 'package:maths_club/screens/settings_page.dart';
+import 'package:maths_club/screens/settings/settings_page.dart';
 import 'package:maths_club/widgets/forks/search_bar.dart';
 
 typedef StringCallback = Future<void> Function(String string);

@@ -11,6 +11,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:maths_club/screens/scheduling/availability_page.dart';
 
+import '../../utils/components.dart';
 import 'job_view.dart';
 
 LessonDataSource? _dataSource;
@@ -18,8 +19,9 @@ LessonDataSource? _dataSource;
 class ScheduleView extends StatefulWidget {
   final List jobList;
   final bool isCompany;
+  final bool isAdmin;
 
-  const ScheduleView({Key? key, required this.jobList, required this.isCompany}) : super(key: key);
+  const ScheduleView({Key? key, required this.jobList, required this.isCompany, required this.isAdmin}) : super(key: key);
 
   @override
   State<ScheduleView> createState() => _ScheduleViewState();
@@ -41,35 +43,17 @@ class _ScheduleViewState extends State<ScheduleView> {
 
     for (Map<String, dynamic> job in widget.jobList) {
       int dayOfWeek = DateTime.parse(job['lessonTimes']['start']).weekday;
-      String recurrenceDay = 'MO';
-
-      if (dayOfWeek == 1) {
-        recurrenceDay = 'MO';
-      } else if (dayOfWeek == 2) {
-        recurrenceDay = 'TU';
-      } else if (dayOfWeek == 3) {
-        recurrenceDay = 'WE';
-      } else if (dayOfWeek == 4) {
-        recurrenceDay = 'TH';
-      } else if (dayOfWeek == 5) {
-        recurrenceDay = 'FR';
-      } else if (dayOfWeek == 6) {
-        recurrenceDay = 'SA';
-      } else if (dayOfWeek == 7) {
-        recurrenceDay = 'SU';
-      }
+      String repeat = job['lessonTimes']['repeat'];
 
       list.add(Appointment(
           subject: job['Job Title'],
           notes: job['Job Description'],
           location: "2cousins Meeting",
           id: job['ID'],
-          startTimeZone: job['timezone'],
-          endTimeZone: job['timezone'],
-          startTime: DateTime.parse(job['lessonTimes']['start']),
-          endTime: DateTime.parse(job['lessonTimes']['end']),
+          startTime: toLocalTime(DateTime.parse(job['lessonTimes']['start']), job['timezone']),
+          endTime: toLocalTime(DateTime.parse(job['lessonTimes']['end']), job['timezone']),
           color: Theme.of(context).colorScheme.primary,
-          recurrenceRule: 'FREQ=WEEKLY;INTERVAL=1;BYDAY=$recurrenceDay'
+          recurrenceRule: getRecurrenceRule(dayOfWeek: dayOfWeek, repeat: repeat)
       ));
     }
 
@@ -80,14 +64,14 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   void calendarTapped(CalendarTapDetails calendarTapDetails) {
     if (calendarTapDetails.appointments != null) {
-      print(calendarTapDetails.appointments!.first.id);
       Navigator.push(
           context,
           MaterialPageRoute(
               builder: (context) =>
                   JobView(
                       jobID: calendarTapDetails.appointments!.first.id,
-                      isCompany: widget.isCompany
+                      isCompany: widget.isCompany,
+                      isAdmin: widget.isAdmin
                   )
           ));
     }
@@ -95,6 +79,10 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   @override
   Widget build(BuildContext context) {
+    List<Appointment> upcoming = _dataSource?.getVisibleAppointments(DateTime.now(), '', DateTime.now().add(const Duration(days: 7))) ?? [];
+    for (Appointment lesson in upcoming) {
+      print(lesson.startTime);
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(

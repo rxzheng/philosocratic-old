@@ -142,12 +142,11 @@ class AppThemes {
         borderRadius: BorderRadius.circular(8),
       ),
     ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.all(Colors.indigoAccent),
-        side: const BorderSide(color: Color(0xff585858)),
+      checkboxTheme: const CheckboxThemeData(
+        side: BorderSide(color: Color(0xff585858)),
       ), colorScheme: const ColorScheme.dark().copyWith(
         primary: Colors.indigoAccent,
-        secondary: Colors.indigo,
+        secondary: Colors.indigoAccent,
         tertiaryContainer: Colors.indigoAccent.shade100.withAlpha(60),
         brightness: Brightness.dark).copyWith(background: Colors.black),
       extensions: [
