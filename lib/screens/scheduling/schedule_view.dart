@@ -16,6 +16,97 @@ import 'job_view.dart';
 
 LessonDataSource? _dataSource;
 
+Future<LessonDataSource> jobListToDataSource(List<dynamic> jobList, {Color? color}) async {
+  List<Appointment> list = [];
+
+  for (Map<String, dynamic> job in jobList) {
+    int dayOfWeek = DateTime.parse(job['lessonTimes']['start']).weekday;
+    String repeat = job['lessonTimes']['repeat'];
+    List<DateTime> recurrenceExceptionDates = [];
+
+    // process exceptions
+    if (job['lessonTimes']['exceptions'] != null) {
+      for (Map<String, dynamic> exception in job['lessonTimes']['exceptions']['add']) {
+        list.add(Appointment(
+            subject: job['Job Title'],
+            notes: job['Job Description'],
+            location: "2cousins Meeting",
+            id: job['ID'],
+            startTime: toLocalTime(toDateTime(exception['from']), job['timezone']),
+            endTime: toLocalTime(toDateTime(exception['to']), job['timezone']),
+            color: color ?? Colors.indigoAccent,
+        ));
+      }
+
+      for (Map<String, dynamic> exception in job['lessonTimes']['exceptions']['remove']) {
+        DateTime start = toDateTime(exception['from']);
+        recurrenceExceptionDates.add(start);
+      }
+    }
+
+    // add the recurring lesson
+    list.add(Appointment(
+        subject: job['Job Title'],
+        notes: job['Job Description'],
+        location: "2cousins Meeting",
+        id: job['ID'],
+        startTime: toLocalTime(DateTime.parse(job['lessonTimes']['start']), job['timezone']),
+        endTime: toLocalTime(DateTime.parse(job['lessonTimes']['end']), job['timezone']),
+        color: color ?? Colors.indigoAccent,
+        recurrenceRule: getRecurrenceRule(dayOfWeek: dayOfWeek, repeat: repeat),
+        recurrenceExceptionDates: recurrenceExceptionDates
+    ));
+  }
+
+  return LessonDataSource(list);
+}
+
+Future<Map<DateTime, Appointment>> jobListToDateTimeCollection(List<dynamic> jobList, {Color? color}) async {
+  Map<DateTime, Appointment> returnMap = {};
+  for (Map<String, dynamic> job in jobList) {
+    int dayOfWeek = DateTime.parse(job['lessonTimes']['start']).weekday;
+    String repeat = job['lessonTimes']['repeat'];
+    List<DateTime> recurrenceExceptionDates = [];
+
+    // add the recurring lesson
+    String? recurrenceRule = getRecurrenceRule(dayOfWeek: dayOfWeek, repeat: repeat, finite: true);
+    DateTime startTime = toLocalTime(DateTime.parse(job['lessonTimes']['start']), job['timezone']);
+
+    List<DateTime> timeList = SfCalendar.getRecurrenceDateTimeCollection(recurrenceRule ?? '', startTime);
+
+    // process exceptions
+    if (job['lessonTimes']['exceptions'] != null) {
+      for (Map<String, dynamic> exception in job['lessonTimes']['exceptions']['add']) {
+        timeList.add(toLocalTime(toDateTime(exception['from']), job['timezone']));
+      }
+
+      for (Map<String, dynamic> exception in job['lessonTimes']['exceptions']['remove']) {
+        DateTime start = toDateTime(exception['from']);
+        recurrenceExceptionDates.add(start);
+      }
+      timeList.removeWhere((element) => recurrenceExceptionDates.contains(element));
+    }
+
+    timeList.sort((a,b) {
+      return a.compareTo(b);
+    });
+
+    for (DateTime time in timeList) {
+      returnMap[time] = Appointment(
+          subject: job['Job Title'],
+          notes: job['Job Description'],
+          location: "2cousins Meeting",
+          id: job['ID'],
+          startTime: time,
+          endTime: time.add(const Duration(hours: 1)),
+          color: color ?? Colors.indigoAccent,
+      );
+    }
+  }
+
+  return returnMap;
+}
+
 class ScheduleView extends StatefulWidget {
   final List jobList;
   final bool isCompany;
@@ -30,36 +121,14 @@ class ScheduleView extends StatefulWidget {
 class _ScheduleViewState extends State<ScheduleView> {
   @override
   void didChangeDependencies() {
-    getDataFromFireStore().then((results) {
+    jobListToDataSource(widget.jobList, color: Theme.of(context).colorScheme.primary).then((LessonDataSource result) {
       SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-        setState(() {});
+        setState(() {
+          _dataSource = result;
+        });
       });
     });
     super.didChangeDependencies();
-  }
-
-  Future<void> getDataFromFireStore() async {
-    List<Appointment> list = [];
-
-    for (Map<String, dynamic> job in widget.jobList) {
-      int dayOfWeek = DateTime.parse(job['lessonTimes']['start']).weekday;
-      String repeat = job['lessonTimes']['repeat'];
-
-      list.add(Appointment(
-          subject: job['Job Title'],
-          notes: job['Job Description'],
-          location: "2cousins Meeting",
-          id: job['ID'],
-          startTime: toLocalTime(DateTime.parse(job['lessonTimes']['start']), job['timezone']),
-          endTime: toLocalTime(DateTime.parse(job['lessonTimes']['end']), job['timezone']),
-          color: Theme.of(context).colorScheme.primary,
-          recurrenceRule: getRecurrenceRule(dayOfWeek: dayOfWeek, repeat: repeat)
-      ));
-    }
-
-    setState(() {
-      _dataSource = LessonDataSource(list);
-    });
   }
 
   void calendarTapped(CalendarTapDetails calendarTapDetails) {
@@ -79,10 +148,6 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   @override
   Widget build(BuildContext context) {
-    List<Appointment> upcoming = _dataSource?.getVisibleAppointments(DateTime.now(), '', DateTime.now().add(const Duration(days: 7))) ?? [];
-    for (Appointment lesson in upcoming) {
-      print(lesson.startTime);
-    }
     return Scaffold(
       appBar: AppBar(
         title: Text(

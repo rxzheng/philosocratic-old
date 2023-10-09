@@ -5,9 +5,12 @@ Author: Garv Shah
 Created: Sat Jul 8 17:04:21 2023
  */
 
+import 'dart:convert';
+
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:maths_club/screens/scheduling/availability_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_extensions/flutter_extensions.dart';
@@ -270,6 +273,13 @@ class _CreateJobState extends State<CreateJob> {
                 .doc(id)
                 .set(jobData);
 
+            if (widget.jobData != null) {
+              // if job already exists, update it
+              FirebaseFunctions.instanceFor(region: 'australia-southeast1')
+                  .httpsCallable('updateJob')
+                  .call({'jobID': id});
+            }
+
             Navigator.pop(context);
 
             ScaffoldMessenger.of(context).showSnackBar(
@@ -351,12 +361,12 @@ class _CreateJobState extends State<CreateJob> {
                           decoration: const InputDecoration(labelText: "Job Description"),
                         ),
                       ),
-                      // availability button
+                      // availability/repeat button
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.all(16.0),
+                            padding: const EdgeInsets.fromLTRB(12, 16, 8, 16),
                             child: OutlinedButton(
                               onPressed: () {
                                 Navigator.push(
@@ -365,6 +375,7 @@ class _CreateJobState extends State<CreateJob> {
                                         builder: (context) => AvailabilityPage(
                                             isCompany: true,
                                             initialValue: jobData['availability'],
+                                            lessonSelector: true,
                                             onSave: (slots) {
                                               jobData['availability'] = slots;
                                             },
@@ -385,7 +396,7 @@ class _CreateJobState extends State<CreateJob> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.all(16.0),
+                            padding: const EdgeInsets.fromLTRB(8, 16, 12, 16),
                             child: OutlinedButton(
                               onPressed: () {
                                 showDialog(

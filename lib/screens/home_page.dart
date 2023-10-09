@@ -322,7 +322,7 @@ Widget fetchProfilePicture(
     String? profilePicture, String? pfpType, String? username,
     {bool padding = false, double? customPadding}) {
   String imageUrl = profilePicture ??
-      "https://avatars.dicebear.com/api/avataaars/$username.svg";
+      "https://api.dicebear.com/7.x/avataaars/svg?seed=$username";
 
   if (imageUrl.isEmpty) {
     return LayoutBuilder(
@@ -468,7 +468,7 @@ class _HomePageState extends State<HomePage> {
 
                               // If user is in role, return normal ListView
                               return SizedBox(
-                                width: isAdmin ? 760 : 600,
+                                width: 760,
                                 child: ListView(
                                   padding: EdgeInsets.zero,
                                   children: [

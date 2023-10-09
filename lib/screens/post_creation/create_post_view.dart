@@ -8,12 +8,15 @@ Created: Sat Jul 23 18:21:21 2022
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:maths_club/utils/config/config.dart' as config;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:maths_club/screens/post_creation/edit_question.dart';
 import 'package:maths_club/utils/components.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/src/iterable_extensions.dart';
+
+import '../scheduling/create_job_view.dart';
 
 /**
  * The following section includes functions for the post/quiz creation page.
@@ -73,7 +76,8 @@ enum JsonType { question, solution, hints }
 /// This is the view where new posts can be created.
 class CreatePost extends StatefulWidget {
   final Map<String, dynamic>? postData;
-  const CreatePost({Key? key, this.postData}) : super(key: key);
+  final bool isAdmin;
+  const CreatePost({Key? key, this.postData, required this.isAdmin}) : super(key: key);
 
   @override
   State<CreatePost> createState() => _CreatePostState();
@@ -144,6 +148,26 @@ class _CreatePostState extends State<CreatePost> {
       });
     }
 
+    bool mathsMode = questionData['Question $questionNumber']['maths_mode'] ?? false;
+
+    List<Widget> settingsDialogueList = [
+      // const Padding(
+      //   padding: EdgeInsets.fromLTRB(25, 0, 25, 10),
+      //   child: SizedBox(
+      //     width: 200,
+      //     child: Text("Change any settings for the question!"),
+      //   ),
+      // ),
+      BoolDialogueOption(
+          title: "Maths Mode Solution",
+          id: 'maths_mode',
+          initialValue: false,
+          onTap: (active, repeat) {
+            mathsMode = !mathsMode;
+            print(mathsMode);
+          }),
+    ];
+
     // SizeTransition to allow for animating the questionCard.
     return SizeTransition(
       sizeFactor: animation,
@@ -178,6 +202,20 @@ class _CreatePostState extends State<CreatePost> {
                             overflow: TextOverflow.ellipsis),
                         Row(
                           children: [
+                            IconButton(
+                                onPressed: () async {
+                                  showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return SimpleDialog(
+                                            title: const Text(
+                                                "Change Question Settings"),
+                                            children:
+                                            settingsDialogueList);
+                                      });
+                                },
+                                icon: Icon(Icons.settings, color: Theme.of(context).hintColor)
+                            ),
                             IconButton(
                                 onPressed: () async {
                                   final experience = await showTextInputDialog(
@@ -280,7 +318,9 @@ class _CreatePostState extends State<CreatePost> {
                                             document: questionData[
                                                         'Question $questionNumber']
                                                     ['Solution'],
-                                            solutionType: true,
+                                            solutionType: {
+                                              'maths_mode': mathsMode,
+                                            },
                                             onSave: (Map<String,dynamic> data) =>
                                                 updateJSON(
                                                     data,
@@ -297,6 +337,7 @@ class _CreatePostState extends State<CreatePost> {
                                                     solution.replaceAll(
                                                         r"\textcolor{#000000}{\cursor}",
                                                         '');
+                                                questionData['Question $questionNumber']['maths_mode'] = mathsMode;
                                               });
                                             },
                                           )),
@@ -371,7 +412,6 @@ class _CreatePostState extends State<CreatePost> {
 
             // If there are no incomplete questions
             if (incompleteQuestion != null && selectedGroup != 'drafts') {
-              print(questionData);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -388,6 +428,7 @@ class _CreatePostState extends State<CreatePost> {
               formData['questionData'] = questionData;
               formData['Group'] = selectedGroup;
               formData['creationTime'] = widget.postData?['creationTime'] ?? DateTime.now();
+              formData['createdBy'] = widget.postData?['createdBy'] ?? FirebaseAuth.instance.currentUser?.uid;
               formData['appVersion'] = 2;
 
               // a quick check to see if the document we're working with is on the old version
@@ -405,24 +446,48 @@ class _CreatePostState extends State<CreatePost> {
               // If the ID is null, create an ID.
               id ??= const Uuid().v4();
 
-              FirebaseFirestore.instance.collection("posts").doc(id).set(
-                  formData);
+              Future<CollectionReference<Object?>> getRef() async {
+                CollectionReference ref = FirebaseFirestore.instance.collection("postPurgatory").doc(formData['createdBy']).collection('posts');
 
-              Navigator.pop(context);
+                if (selectedGroup != 'review') {
+                  ref = FirebaseFirestore.instance.collection("posts");
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    "Uploading Post!",
-                    style: TextStyle(color: Theme
+                  return ref;
+                } else {
+                  DocumentReference docRef = FirebaseFirestore.instance.collection("postPurgatory").doc(formData['createdBy']);
+                  final doc = await docRef.get();
+                  if (doc.exists) {
+                    return ref;
+                  } else {
+                    // make document first and then return ref
+                    await docRef.set({
+                      'id': formData['createdBy'],
+                    });
+                  }
+
+                  return ref;
+                }
+              }
+
+              getRef().then((CollectionReference ref) {
+                ref.doc(id).set(formData);
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "Uploading Post!",
+                      style: TextStyle(color: Theme
+                          .of(context)
+                          .primaryColorLight),
+                    ),
+                    backgroundColor: Theme
                         .of(context)
-                        .primaryColorLight),
+                        .scaffoldBackgroundColor,
                   ),
-                  backgroundColor: Theme
-                      .of(context)
-                      .scaffoldBackgroundColor,
-                ),
-              );
+                );
+              });
             }
           }
         },
@@ -500,17 +565,31 @@ class _CreatePostState extends State<CreatePost> {
                                 return Text(postGroupsSnapshot.error.toString());
                               } else {
                                 List<DropdownMenuItem<String>> groups = [];
-                                List docs = postGroupsSnapshot.data?.docs ?? [];
-                                docs.sort((a, b) => a.data()['order'].compareTo(b.data()['order']));
+                                List docs = [];
 
-                                // Iterates through the documents in he collection and creates a list of dropdown menu options.
-                                for (QueryDocumentSnapshot<Map<String, dynamic>>? doc in docs) {
-                                  if (doc?['apps'].contains(config.appID)) {
-                                    groups.add(DropdownMenuItem(
-                                        value: doc?.id ?? "error",
-                                        child: Text(doc?['tag'] ??
-                                            "Invalid Group Name")));
+                                if (widget.isAdmin) {
+                                  docs = postGroupsSnapshot.data?.docs ?? [];
+                                  docs.sort((a, b) =>
+                                      a.data()['order'].compareTo(
+                                          b.data()['order']));
+
+                                  // Iterates through the documents in he collection and creates a list of dropdown menu options.
+                                  for (QueryDocumentSnapshot<
+                                      Map<String, dynamic>>? doc in docs) {
+                                    if (doc?['apps'].contains(config.appID)) {
+                                      groups.add(DropdownMenuItem(
+                                          value: doc?.id ?? "error",
+                                          child: Text(doc?['tag'] ??
+                                              "Invalid Group Name")));
+                                    }
                                   }
+                                } else {
+                                  groups = [
+                                    const DropdownMenuItem(
+                                        value: "review",
+                                        child: Text("In Review"),
+                                    )
+                                  ];
                                 }
 
                                 // If there is no selected group, set it to something

@@ -62,7 +62,7 @@ function getRRule(date: Date, repeat: string) {
         interval: interval,
         byweekday: weekday,
         dtstart: date,
-        until: datetime(4000, 12, 31)
+        until: datetime(4000, 12, 31),
     });
 }
 
@@ -125,6 +125,10 @@ exports.createUser = functions
             'username': '',
             'experience': 0,
             'completedQuizzes': []
+        });
+
+        await db.collection('availability').doc(user.uid).set({
+            'id': user.uid,
         });
 
         console.log(`Creating User For ${user.uid}`)
@@ -623,7 +627,6 @@ exports.startShift = functions
                 throw new functions.https.HttpsError('unauthenticated', 'User has no active jobs to start!');
             }
 
-            let jobList: DocumentData[] = profileData['jobList'];
             let hoursPerSubject: DocumentData | null = profileData['hoursPerSubject']; // volunteer record but collated to hours per subject
 
             if (hoursPerSubject == null) {
@@ -667,7 +670,8 @@ exports.startShift = functions
                 if (previous == undefined || previous['end'] != null) {
                     throw new functions.https.HttpsError('unauthenticated', 'An error seems to have occurred where you ended a lesson that never started.');
                 } else {
-                    let job: DocumentData | undefined = jobList.find((job) => job['ID'] == jobID);
+                    const jobDoc = await db.collection('jobs').doc(jobID).get();
+                    let job: DocumentData | undefined = jobDoc.data();
 
                     if (job == undefined) {
                         throw new functions.https.HttpsError('unauthenticated', 'An error seems to have occurred where you ended a lesson that you never claimed.');
@@ -688,7 +692,22 @@ exports.startShift = functions
                         intendedEnd = lessonTimeEnd;
                     } else {
                         // checks in between start time and 20 minutes past start time
-                        let dateList: Date[] = repeatRule.between(start, new Date(now.getTime() + ((20*60*1000))))
+                        let dateList: Date[] = repeatRule.between(start, new Date(now.getTime() + (20*60*1000)))
+
+                        // factor in add exceptions
+                        if (job['lessonTimes']['exceptions'] != null) {
+                            let addList: DocumentData[] = job['lessonTimes']['exceptions']['add'];
+                            dateList = dateList.concat(addList.map(val => new Date(Date.parse(val['to']))));
+
+                            let removeList: DocumentData[] = job['lessonTimes']['exceptions']['remove'];
+                            dateList = dateList.filter(val => !removeList.map(val => new Date(Date.parse(val['to']))).includes(val));
+                        }
+
+                        // sort the array by time
+                        dateList.sort((a: Date, b: Date) => {
+                            return a.getTime() - b.getTime();
+                        });
+
                         if (dateList.length == 0) {
                             intendedEnd = null;
                         } else {
@@ -754,6 +773,72 @@ exports.startShift = functions
         }
     });
 
+exports.updateJob = functions
+    .region('australia-southeast1')
+    .https.onCall(async (data, context) => {
+        let jobID = data.jobID;
+        if (jobID == null) {
+            throw new functions.https.HttpsError('invalid-argument', 'A job ID must be provided!');
+        } else if (context.auth?.uid == null) {
+            throw new functions.https.HttpsError('unauthenticated', 'UID cannot be null');
+        } else {
+            functions.logger.info(`Updating job data for ${jobID}`, {structuredData: true});
+            const jobDoc = await db.collection('jobs').doc(jobID).get();
+            const jobData: DocumentData = jobDoc.data();
+
+            const createdBy: DocumentData = jobData['createdBy'];
+            const assignedTo: DocumentData = jobData['assignedTo'];
+
+            let canUpdate: boolean = false;
+
+            if (createdBy != null && createdBy['id'] == context.auth?.uid) {
+                canUpdate = true;
+            } else {
+                // check if the user is an admin
+                const userRole = db.collection('roles').doc('admins');
+                const doc = await userRole.get();
+                let admins: string[] = doc.data()['members'];
+                if (admins.includes(context.auth?.uid)) {
+                    canUpdate = true;
+                }
+            }
+
+            if (canUpdate) {
+                // update in the assignedTo user
+                if (assignedTo != null) {
+                    const assignedToDoc = db.collection('publicProfile').doc(assignedTo['id']);
+                    const doc = await assignedToDoc.get();
+                    let jobList: DocumentData[] = doc.data()['jobList'];
+                    const index: number = jobList.findIndex(x => x['ID'] === jobID);
+                    jobList[index] = jobData;
+
+                    await assignedToDoc.update(JSON.parse(JSON.stringify({
+                        'jobList': jobList,
+                    })));
+                    console.log(`Updated assignedTo job ${jobID} for ${assignedTo['id']}`);
+                }
+
+                // update in the createdBy user
+                if (createdBy != null) {
+                    const createdByDoc = db.collection('publicProfile').doc(createdBy['id']);
+                    const doc = await createdByDoc.get();
+                    let jobList: DocumentData[] = doc.data()['jobList'];
+                    const index: number = jobList.findIndex(x => x['ID'] === jobID);
+                    jobList[index] = jobData;
+
+                    await createdByDoc.update(JSON.parse(JSON.stringify({
+                        'jobList': jobList,
+                    })));
+                    console.log(`Updated createdBy job ${jobID} for ${createdByDoc['id']}`);
+                }
+
+                console.log(`Finished updating job ${jobID}`);
+            } else {
+                throw new functions.https.HttpsError('permission-denied', 'You do not have permission to update this job');
+            }
+        }
+    });
+
 exports.updatePfp = functions
     .region('australia-southeast1')
     .https.onCall((data, context) => {
@@ -812,15 +897,21 @@ exports.markQuestions = functions
                 const data: { [key: string]: any; } = Object(quiz.data() as object)['questionData'][`Question ${i}`];
                 const experience: number = data['Experience'];
 
-                const correctAnswerLatex: string = data['Solution TEX'];
-                console.log(correctAnswerLatex);
-                const correctAnswer = MathExpression.fromLatex(correctAnswerLatex);
+                const correctAnswer: string = data['Solution TEX'];
+                const userAnswer: string | undefined = Object(questionAnswers)[`Question ${i}`];
+                console.log(correctAnswer);
+                console.log(userAnswer);
+                let isCorrect: boolean = false;
 
-                const userAnswerLatex: string | undefined = Object(questionAnswers)[`Question ${i}`];
-                console.log(userAnswerLatex);
-                const userAnswer = MathExpression.fromLatex(userAnswerLatex);
+                if (data['maths_mode'] == true) {
+                    const correctAnswerLatex = MathExpression.fromLatex(correctAnswer);
+                    const userAnswerLatex = MathExpression.fromLatex(userAnswer);
 
-                const isCorrect: boolean = correctAnswer.equals(userAnswer);
+                    isCorrect = correctAnswerLatex.equals(userAnswerLatex);
+                } else {
+                    isCorrect = correctAnswer == userAnswer;
+                }
+
                 markedObject[`Question ${i}`] = isCorrect;
 
                 if (isCorrect) {
@@ -856,13 +947,24 @@ exports.fixValidationIssues = functions
         const publicProfileCollections = await db.collection("publicProfile");
         const traverser = createTraverser(publicProfileCollections);
 
-        const requiredFields = ['pfpType', 'profilePicture', 'username']
+        const requiredFields = ['pfpType', 'profilePicture', 'username', 'userType']
         let missingFields: {[key: string]: Array<string>} = {};
 
         await traverser.traverse(async (batchDocs) => {
             await Promise.all(
                 batchDocs.map(async (document: QueryDocumentSnapshot<DocumentData>) => {
                     const data = document.data();
+
+                    db.collection("availability").doc(document.id).get().then((availabilitySnapshot: any) => {
+                        if (availabilitySnapshot.exists) {
+                            // do nothing, we're all good
+                        } else {
+                            console.log(`Missing availability for ${document.id}`);
+                            db.collection("availability").doc(document.id).set({
+                               'id': document.id
+                            });
+                        }
+                    })
 
                     requiredFields.forEach((field) => {
                         if (data[field] == undefined || data[field]?.isEmpty || data[field] == '') {
@@ -885,7 +987,11 @@ exports.fixValidationIssues = functions
                     let updateObject: { [key: string]: string; } = {};
 
                     missingFields[uid].forEach((entry) => {
-                        updateObject[entry] = userInfo[entry];
+                        if (entry == 'userType') {
+                            updateObject[entry] = 'aporia_app';
+                        } else {
+                            updateObject[entry] = userInfo[entry];
+                        }
                     });
 
                     await db.collection('publicProfile').doc(uid).update(updateObject);
@@ -920,7 +1026,7 @@ exports.generateCertificate = functions
             const doc = await publicProfile.get();
             let profileData = doc.data();
 
-            if (profileData['hoursPerSubject'] == null || profileData['volunteer'] != true) {
+            if (profileData['hoursPerSubject'] == null) {
                 throw new functions.https.HttpsError('unauthenticated', 'User has no subjects they have volunteered for!');
             }
 

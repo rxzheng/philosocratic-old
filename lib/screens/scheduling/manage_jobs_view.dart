@@ -13,8 +13,6 @@ import 'package:algolia/algolia.dart';
 import 'package:maths_club/widgets/section_app_bar.dart';
 import 'dart:ui';
 
-import '../home_page.dart';
-
 /// This is the page which allows all jobs to be searched and managed
 class ManageJobsPage extends StatefulWidget {
   final bool isAdmin;
@@ -135,7 +133,15 @@ class _ManageJobsPageState extends State<ManageJobsPage> {
                               Padding(
                                       padding: const EdgeInsets.fromLTRB(
                                           26, 16, 0, 16),
-                                      child: Text("Submitted Jobs",
+                                      child: Text((() {
+                                        if (widget.isAdmin) {
+                                          return "All Jobs";
+                                        } else if (widget.isCompany) {
+                                          return "Created Jobs";
+                                        } else {
+                                          return "Assigned Jobs";
+                                        }
+                                      } ()),
                                           style: Theme.of(context)
                                               .textTheme
                                               .headlineMedium

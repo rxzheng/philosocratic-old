@@ -28,10 +28,15 @@ Widget jobCard(BuildContext context,
     required bool isAdmin,
     required bool isCompany,
     bool showAssigned = false,
+    bool doesNotMatchAvailability = false,
     List? times,
     Map<Object, Object?>? initialData,
     required Map<String, dynamic> data}) {
   Color statusColour = (() {
+    if (doesNotMatchAvailability) {
+      return Colors.red;
+    }
+
     if (data['status'] == 'pending_assignment') {
       return Colors.blue;
     } else if (data['status'] == 'assigned') {
@@ -45,6 +50,21 @@ Widget jobCard(BuildContext context,
   double screenWidth = MediaQuery.of(context).size.width;
   showAssigned = showAssigned && data['assignedTo'] != null;
   String? subtitleUser = showAssigned ? 'assignedTo' : 'createdBy';
+
+  String? subHeading;
+
+  if (data['repeatOptions'] != null) {
+    List<String> nameList = [];
+    for (String tag in data['repeatOptions']) {
+      String name = processRepeatOptionTag(tag);
+      nameList.add(name);
+    }
+    subHeading = "Offers: ${nameList.join(", ")}";
+  }
+
+  if (data['status'] == 'assigned') {
+    subHeading = lessonTimeString(data["lessonTimes"]["start"], data["lessonTimes"]["end"], data["timezone"], data["lessonTimes"]['repeat']);
+  }
 
   return Padding(
     padding: const EdgeInsets.fromLTRB(24.0, 6.0, 24.0, 6.0),
@@ -75,7 +95,7 @@ Widget jobCard(BuildContext context,
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          "Claiming Job!",
+                          "Claiming Job! This may take a couple minutes, hold on tight.",
                           style: TextStyle(
                               color: Theme.of(context).primaryColorLight),
                         ),
@@ -140,92 +160,92 @@ Widget jobCard(BuildContext context,
                         Expanded(
                           child: Row(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text("${data["Job Title"]}",
-                                    style: const TextStyle(
-                                        fontSize: 25,
-                                        overflow: TextOverflow.clip),
-                                    maxLines: 1),
-                              ),
-                              Flexible(
+                              Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0),
-                                  child: SizedBox(
-                                    height: 35,
-                                    child: ListView.builder(
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        scrollDirection: Axis.horizontal,
-                                        shrinkWrap: true,
-                                        itemCount:
-                                            (data['requirements'].length > 2)
-                                                ? (screenWidth < 500)
-                                                    ? 2
-                                                    : 3
-                                                : data['requirements'].length,
-                                        itemBuilder: (BuildContext context,
-                                            int itemNum) {
-                                          if ((data['requirements'].length >
-                                                      2 &&
-                                                  itemNum == 2) |
-                                              (screenWidth < 500 &&
-                                                  data['requirements'].length >
-                                                      1 &&
-                                                  itemNum == 1)) {
-                                            return Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 4.0),
-                                              child: Card(
-                                                color: Theme.of(context)
-                                                    .highlightColor,
-                                                shape:
-                                                    const RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.all(
-                                                          Radius.circular(8)),
-                                                ),
-                                                child: const Padding(
-                                                  padding: EdgeInsets.fromLTRB(
-                                                      8.0, 4.0, 8.0, 4.0),
-                                                  child: Text(
-                                                    "More",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text("${data["Job Title"]}",
+                                      style: const TextStyle(
+                                          fontSize: 25,
+                                          overflow: TextOverflow.ellipsis)
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8.0),
+                                child: SizedBox(
+                                  height: 35,
+                                  child: ListView.builder(
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      scrollDirection: Axis.horizontal,
+                                      shrinkWrap: true,
+                                      itemCount:
+                                          (data['requirements'].length > 2)
+                                              ? (screenWidth < 500)
+                                                  ? 2
+                                                  : 3
+                                              : data['requirements'].length,
+                                      itemBuilder: (BuildContext context,
+                                          int itemNum) {
+                                        if ((data['requirements'].length >
+                                                    2 &&
+                                                itemNum == 2) |
+                                            (screenWidth < 500 &&
+                                                data['requirements'].length >
+                                                    1 &&
+                                                itemNum == 1)) {
+                                          return Padding(
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 4.0),
+                                            child: Card(
+                                              color: Theme.of(context)
+                                                  .highlightColor,
+                                              shape:
+                                                  const RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.all(
+                                                        Radius.circular(8)),
                                               ),
-                                            );
-                                          }
-                                          Map<String, dynamic>? requirement =
-                                              data["requirements"]
-                                                  ["Subject ${itemNum + 1}"];
-                                          return Card(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.15),
-                                            shape: const RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(8)),
-                                            ),
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      8.0, 4.0, 8.0, 4.0),
-                                              child: Text(
-                                                "Yr${requirement?["Level"].toString() ?? '0'} ${requirement?["Subject"]}",
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                              child: const Padding(
+                                                padding: EdgeInsets.fromLTRB(
+                                                    8.0, 4.0, 8.0, 4.0),
+                                                child: Text(
+                                                  "More",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
                                                 ),
                                               ),
                                             ),
                                           );
-                                        }),
-                                  ),
+                                        }
+                                        Map<String, dynamic>? requirement =
+                                            data["requirements"]
+                                                ["Subject ${itemNum + 1}"];
+                                        return Card(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.15),
+                                          shape: const RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(8)),
+                                          ),
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsets.fromLTRB(
+                                                    8.0, 4.0, 8.0, 4.0),
+                                            child: Text(
+                                              "Yr${requirement?["Level"].toString() ?? '0'} ${requirement?["Subject"]}",
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }),
                                 ),
                               ),
                             ],
@@ -233,7 +253,28 @@ Widget jobCard(BuildContext context,
                         ),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 6),
-                          child: isCompany
+                          child: (isCompany || isAdmin)
+                              ? SizedBox(
+                            height: 32.0,
+                            width: 32.0,
+                            child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  // go to edit the job
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => CreateJob(
+                                              jobData: data, userData: data['createdBy'])));
+                                },
+                                child: Icon(Icons.edit,
+                                    color: Theme.of(context).hintColor)),
+                          )
+                              : const SizedBox.shrink(),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: (isCompany || isAdmin)
                               ? SizedBox(
                                   height: 32.0,
                                   width: 32.0,
@@ -281,6 +322,18 @@ Widget jobCard(BuildContext context,
                         ),
                       ],
                     ),
+                    (subHeading != null) ? RichText(
+                      text: TextSpan(
+                        text: subHeading,
+                        style: TextStyle(
+                          overflow: TextOverflow.clip,
+                          color: Theme.of(context).hintColor,
+                        ),
+                        children: (isAdmin || isCompany) && data['status'] == 'pending_assignment' ? <TextSpan>[
+                          TextSpan(text: ' - awaiting assignment', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                        ] : [],
+                      ),
+                    ) : const SizedBox.shrink(),
                     Text(
                       "${data["Job Description"]}",
                       style: const TextStyle(overflow: TextOverflow.clip),
@@ -351,6 +404,7 @@ class AvailableJobsPage extends StatefulWidget {
 class _AvailableJobsPageState extends State<AvailableJobsPage> {
   List<String> subjectBlockList = [];
   List<String> repeatBlockList = [];
+  bool viewAll = false;
 
   @override
   Widget build(BuildContext context) {
@@ -385,27 +439,27 @@ class _AvailableJobsPageState extends State<AvailableJobsPage> {
       BoolDialogueOption(
           title: "Daily",
           id: 'daily',
-          initialValue: true,
+          initialValue: !repeatBlockList.contains('daily'),
           onTap: (active, repeat) => addToBlockList(active, repeat, 'repeat')),
       BoolDialogueOption(
           title: "Weekly",
           id: 'weekly',
-          initialValue: true,
+          initialValue: !repeatBlockList.contains('weekly'),
           onTap: (active, repeat) => addToBlockList(active, repeat, 'repeat')),
       BoolDialogueOption(
           title: "Fortnightly",
           id: 'fortnightly',
-          initialValue: true,
+          initialValue: !repeatBlockList.contains('fortnightly'),
           onTap: (active, repeat) => addToBlockList(active, repeat, 'repeat')),
       BoolDialogueOption(
           title: "Monthly",
           id: 'monthly',
-          initialValue: true,
+          initialValue: !repeatBlockList.contains('monthly'),
           onTap: (active, repeat) => addToBlockList(active, repeat, 'repeat')),
       BoolDialogueOption(
           title: "Once Off",
           id: 'once',
-          initialValue: true,
+          initialValue: !repeatBlockList.contains('once'),
           onTap: (active, repeat) => addToBlockList(active, repeat, 'repeat')),
     ];
 
@@ -429,7 +483,7 @@ class _AvailableJobsPageState extends State<AvailableJobsPage> {
         subjectDialogueList.add(BoolDialogueOption(
             title: subject,
             id: subject,
-            initialValue: true,
+            initialValue: !subjectBlockList.contains(subject),
             onTap: (active, repeat) =>
                 addToBlockList(active, repeat, 'subject')));
       }
@@ -445,12 +499,13 @@ class _AvailableJobsPageState extends State<AvailableJobsPage> {
               .snapshots(),
           builder: (context, jobSnapshot) {
             if (jobSnapshot.connectionState == ConnectionState.active) {
+              int itemCount = (jobSnapshot.data?.docs.length ?? 0) + 2;
               return SafeArea(
                 child: Center(
                   child: SizedBox(
                     width: 760,
                     child: ListView.builder(
-                      itemCount: (jobSnapshot.data?.docs.length ?? 0) + 1,
+                      itemCount: itemCount,
                       itemBuilder: (BuildContext context, int index) {
                         // If index is first, return header, if not, return user entry.
                         if (index == 0) {
@@ -479,94 +534,123 @@ class _AvailableJobsPageState extends State<AvailableJobsPage> {
                                   child: header("Available Jobs", context,
                                       fontSize: 30, backArrow: true),
                                 ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text("Filters:",
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineSmall),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          16, 16, 8, 16),
-                                      child: OutlinedButton(
-                                        onPressed: () {
-                                          showDialog(
-                                              context: context,
-                                              builder: (BuildContext context) {
-                                                return SimpleDialog(
-                                                    title: const Text(
-                                                        "Subject Filter"),
-                                                    children:
-                                                        subjectDialogueList);
-                                              });
-                                        },
-                                        style: ButtonStyle(
-                                          foregroundColor:
-                                              MaterialStateProperty.all<Color>(
-                                                  Colors.white),
-                                          backgroundColor:
-                                              MaterialStateProperty.all<Color>(
-                                                  Theme.of(context)
-                                                      .colorScheme
-                                                      .primary),
-                                          shape: MaterialStateProperty.all<
-                                                  RoundedRectangleBorder>(
-                                              RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          4.0),
-                                                  side: BorderSide(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .primary))),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      Text("Filters:",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 16, 8, 16),
+                                        child: OutlinedButton(
+                                          onPressed: () {
+                                            showDialog(
+                                                context: context,
+                                                builder: (BuildContext context) {
+                                                  return SimpleDialog(
+                                                      title: const Text(
+                                                          "Subject Filter"),
+                                                      children:
+                                                          subjectDialogueList);
+                                                });
+                                          },
+                                          style: ButtonStyle(
+                                            foregroundColor:
+                                                MaterialStateProperty.all<Color>(
+                                                    Colors.white),
+                                            backgroundColor:
+                                                MaterialStateProperty.all<Color>(
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .primary),
+                                            shape: MaterialStateProperty.all<
+                                                    RoundedRectangleBorder>(
+                                                RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4.0),
+                                                    side: BorderSide(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary))),
+                                          ),
+                                          child: const Text('Subject'),
                                         ),
-                                        child: const Text('Subject'),
                                       ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          8, 16, 16, 16),
-                                      child: OutlinedButton(
-                                        onPressed: () {
-                                          showDialog(
-                                              context: context,
-                                              builder: (BuildContext context) {
-                                                return SimpleDialog(
-                                                    title: const Text(
-                                                        "Repeat Frequency Preference"),
-                                                    children:
-                                                        repeatDialogueList);
-                                              });
-                                        },
-                                        style: ButtonStyle(
-                                          foregroundColor:
-                                              MaterialStateProperty.all<Color>(
-                                                  Colors.white),
-                                          backgroundColor:
-                                              MaterialStateProperty.all<Color>(
-                                                  Theme.of(context)
-                                                      .colorScheme
-                                                      .primary),
-                                          shape: MaterialStateProperty.all<
-                                                  RoundedRectangleBorder>(
-                                              RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          4.0),
-                                                  side: BorderSide(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .primary))),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            8, 16, 16, 16),
+                                        child: OutlinedButton(
+                                          onPressed: () {
+                                            showDialog(
+                                                context: context,
+                                                builder: (BuildContext context) {
+                                                  return SimpleDialog(
+                                                      title: const Text(
+                                                          "Repeat Frequency Preference"),
+                                                      children:
+                                                          repeatDialogueList);
+                                                });
+                                          },
+                                          style: ButtonStyle(
+                                            foregroundColor:
+                                                MaterialStateProperty.all<Color>(
+                                                    Colors.white),
+                                            backgroundColor:
+                                                MaterialStateProperty.all<Color>(
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .primary),
+                                            shape: MaterialStateProperty.all<
+                                                    RoundedRectangleBorder>(
+                                                RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4.0),
+                                                    side: BorderSide(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary))),
+                                          ),
+                                          child: const Text('Repeat Frequency'),
                                         ),
-                                        child: const Text('Repeat Frequency'),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 )
                               ],
                             );
                           }
+                        } else if (index == (itemCount - 1)) {
+                          return Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Center(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    viewAll = !viewAll;
+                                  });
+                                },
+                                style: ButtonStyle(
+                                  shape: MaterialStateProperty.all<
+                                      RoundedRectangleBorder>(
+                                      RoundedRectangleBorder(
+                                          borderRadius:
+                                          BorderRadius.circular(
+                                              4.0),
+                                          side: BorderSide(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary))),
+                                ),
+                                child: Text(viewAll ? 'View Less Jobs' : 'View More Jobs'),
+                              ),
+                            ),
+                          );
                         } else {
                           QueryDocumentSnapshot<Map<String, dynamic>>?
                               document = jobSnapshot.data?.docs[index - 1];
@@ -578,13 +662,12 @@ class _AvailableJobsPageState extends State<AvailableJobsPage> {
                             for (var requirement
                                 in data['requirements'].values) {
                               if (subjectBlockList
-                                  .contains(requirement['Subject'])) {
+                                  .contains(requirement['Subject']) && viewAll == false) {
                                 return const SizedBox.shrink();
                               }
                             }
                           }
-                          if (data['repeatOptions'].every(
-                              (item) => repeatBlockList.contains(item))) {
+                          if (data['repeatOptions'].every((item) => repeatBlockList.contains(item)) && viewAll == false) {
                             return const SizedBox.shrink();
                           }
 
@@ -667,7 +750,41 @@ class _AvailableJobsPageState extends State<AvailableJobsPage> {
                                     textAlign: TextAlign.center,
                                   ));
                             } else {
-                              return const SizedBox.shrink();
+                              if (viewAll == false) {
+                                return const SizedBox.shrink();
+                              } else {
+                                Map<String, List> companyExceptions = {
+                                  'add': [],
+                                  'remove': [],
+                                };
+
+                                if (data['availability']['exceptions'] != null) {
+                                  companyExceptions['add'] =
+                                  data['availability']['exceptions']['add'];
+                                  companyExceptions['remove'] =
+                                  data['availability']['exceptions']['remove'];
+                                }
+
+                                Map initialExceptions = globalExceptions = {
+                                  'add': companyExceptions['add']!,
+                                  'remove': companyExceptions['remove']!,
+                                };
+
+                                Map<Object, Object?> initialData = {
+                                  'slots': [],
+                                  'exceptions': initialExceptions
+                                };
+
+                                return jobCard(
+                                  context,
+                                  data: data,
+                                  isAdmin: false,
+                                  isCompany: false,
+                                  doesNotMatchAvailability: true,
+                                  times: companyAvailability.toList(),
+                                  initialData: initialData,
+                                );
+                              }
                             }
                           }
                         }

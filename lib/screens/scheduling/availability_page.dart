@@ -7,6 +7,7 @@ Created: Sat Jul 8 17:04:21 2023
 
 import 'package:maths_club/screens/scheduling/job_selector_page.dart';
 import 'package:maths_club/utils/components.dart';
+import 'package:maths_club/utils/get_country.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +17,23 @@ import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 import '../post_creation/create_post_view.dart';
+
+String processRepeatOptionTag(String tag) {
+  switch (tag) {
+    case 'daily':
+      return 'Daily';
+    case 'weekly':
+      return 'Weekly';
+    case 'fortnightly':
+      return 'Fortnightly';
+    case 'monthly':
+      return 'Monthly';
+    case 'once':
+      return 'Once Off';
+    default:
+      return tag;
+  }
+}
 
 typedef DataCallback = void Function(Map data);
 LessonDataSource? _dataSource;
@@ -48,6 +66,14 @@ DateTime justTime(DateTime time) {
 }
 
 DateTime toDateTime(dynamic time) {
+  if (time is String) {
+    return DateTime.parse(time);
+  }
+
+  if (time is Map<String, dynamic>) {
+    return Timestamp(time['_seconds'], time['_nanoseconds']).toDate();
+  }
+
   return time is DateTime ? time : DateTime.parse(time.toDate().toString());
 }
 
@@ -86,6 +112,8 @@ class AvailabilityPage extends StatefulWidget {
   final bool isCompany;
   final Map<Object, Object?>? initialValue;
   final DataCallback? onSave;
+  final bool lessonSelector;
+  final bool modifyingSchedule;
   final List? restrictionZone;
   final List? repeatOptions;
 
@@ -93,6 +121,8 @@ class AvailabilityPage extends StatefulWidget {
       {Key? key,
       required this.isCompany,
       this.onSave,
+      this.lessonSelector = false,
+      this.modifyingSchedule = false,
       this.initialValue,
       this.repeatOptions,
       this.restrictionZone})
@@ -109,23 +139,7 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
 
   List<DropdownMenuItem<String>> availableRepeatOptions = [];
   String selectedRepeatOption = 'weekly';
-
-  String processRepeatOptionTag(String tag) {
-    switch (tag) {
-      case 'daily':
-        return 'Daily';
-      case 'weekly':
-        return 'Weekly';
-      case 'fortnightly':
-        return 'Fortnightly';
-      case 'monthly':
-        return 'Monthly';
-      case 'once':
-        return 'Once Off';
-      default:
-        return tag;
-    }
-  }
+  String? country;
 
   DateTime dateToRepeatStart(String tag, DateTime date) {
     // returns the date from 2018, where that repeat forward connects with the date
@@ -150,6 +164,21 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
   void initState() {
     _controller = CalendarController();
     _headerText = DateFormat('MMMM yyyy').format(DateTime.now());
+    getCountry().then((String value) {
+      print(value);
+      if (value == 'United States') {
+        SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+          setState(() {
+            country = value;
+            repeatOnSave = false;
+
+            if ((widget.repeatOptions ?? []).contains('once')) {
+              selectedRepeatOption = 'once';
+            }
+          });
+        });
+      }
+    });
 
     // populate available repeat times
     if (widget.repeatOptions != null) {
@@ -196,6 +225,19 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
         availabilitySnapshot.data() as Map<String, dynamic>?;
 
     List slots = widget.initialValue?['slots'] ?? (snapshotData?['slots'] ?? []);
+
+    if (widget.modifyingSchedule) {
+      // load from the schedule format
+      repeatOnSave = false;
+      DateTime from = toLocalTime(toDateTime(widget.initialValue?['start']), widget.initialValue!['timezone'] as String);
+      DateTime to = toLocalTime(toDateTime(widget.initialValue?['end']), widget.initialValue!['timezone'] as String);
+
+      selectedRepeatOption = widget.initialValue?['repeat'] as String;
+      slots = [
+        {'from': from, 'to': to}
+      ];
+    }
+
     oldSlots = slots;
     Map exceptions = widget.initialValue?['exceptions'] ?? (snapshotData?['exceptions'] ?? {
       'add': [],
@@ -309,7 +351,7 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Availability Selector",
+          !widget.lessonSelector ? "Availability Selector" : "Possible Lesson Times",
           style: Theme.of(context).textTheme.titleLarge,
         ),
         backgroundColor: Colors.transparent,
@@ -394,9 +436,8 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
               specialRegions: _getTimeRegions(widget.restrictionZone ?? []),
             ),
           ),
-          (widget.restrictionZone == null) ? Tooltip(
-            message:
-                "Checking this box changes your general preferred availability for all weeks. If you wish to only change your availability for this current week, leave this box unchecked.",
+          (widget.restrictionZone == null && widget.modifyingSchedule != true) ? Tooltip(
+            message: "Checking this box changes your general preferred availability for all weeks. If you wish to only change your availability for this current week, leave this box unchecked.",
             child: LabeledCheckbox(
               label: "Apply changes to all weeks",
               value: repeatOnSave,
